@@ -1,52 +1,84 @@
 package booth.member.controller;
 
-import java.io.IOException;
+import booth.member.model.MemberDAO;
+import booth.member.model.MemberDTO;
 
-import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
+import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
-import booth.member.action.memberAction;
-import booth.member.action.memberJoinAction;
-import booth.member.action.memberLoginAction;
+import org.json.JSONObject;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 
-@WebServlet("/member/*")
+import java.io.IOException;
+import java.io.PrintWriter;
 
-public class MemberController extends HttpServlet {
-	private static final long serialVersionUID = 1L;
-       
-	protected void doHandle(HttpServletRequest request, HttpServletResponse response, boolean bIsGet) throws ServletException, IOException {
-		request.setCharacterEncoding("utf-8");
-		String viewPage = null;
-		memberAction command = null;
-		String uri = request.getRequestURI();
+@Controller
+@RequestMapping("/member")
+//@MultipartConfig(location="/testfile", fileSizeThreshold=1024*1024, maxFileSize=1024*1024*5, maxRequestSize=1024*1024*5*5)
 
-		String com = uri.substring(uri.lastIndexOf("/")+1, uri.lastIndexOf(".do"));
-		
-		if (com != null && com.trim().contentEquals("memberJoin")) {
-			command = new memberJoinAction();
-			command.execute(request, response);
-			return;
-		}else if (com != null && com.trim().contentEquals("memberLogin")) {
-			command = new memberLoginAction();
-			command.execute(request, response);
-			return;
-			//viewPage = "mView.jsp";
+public class MemberController {
+	@RequestMapping("/logout")
+	public void logout(HttpSession session, HttpServletResponse response) throws IOException
+	{
+		session.removeAttribute("loginStatus");
+		session.removeAttribute("MemberDTO");
+		response.sendRedirect("../");
+	}
+
+	@RequestMapping("/idcheck")
+	public void idcheck(@RequestParam("userId") String userId, HttpServletResponse response) throws IOException {
+		MemberDAO dao = new MemberDAO();
+		if (dao.isIdDuplicated(userId))
+		{
+			response.getWriter().write("DUPLICATED");
 		}
-		
-		RequestDispatcher rd = request.getRequestDispatcher(viewPage);
-		rd.forward(request, response);
+		else
+		{
+			response.getWriter().write("USABLE");
+		}
 	}
-
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		doHandle(request, response, true);
+	
+	@RequestMapping("/login")
+	public void login(@RequestParam("userId") String userId, @RequestParam("userPw") String userPw, HttpServletResponse response, HttpSession session) throws IOException {
+		MemberDAO dao = new MemberDAO();
+		MemberDTO dto = dao.login(userId, userPw);
+		if (dto != null)
+		{
+			session.setAttribute("loginStatus", "true");
+			session.setAttribute("MemberDTO", dto);
+			response.getWriter().write("SUCCESS");
+		}
+		else
+		{
+			response.getWriter().write("FAIL");
+		}
 	}
-
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		doHandle(request, response, false);
+	
+	@RequestMapping("/join")
+	public void Register(@RequestParam("userId") String userId, @RequestParam("userPw") String userPw,
+			@RequestParam("userNick") String userNick, @RequestParam("userPhoneNum") String userPhoneNum,
+			@RequestParam("userEmail") String userEmail, HttpServletResponse response, HttpSession session) throws IOException {
+		MemberDTO dto = new MemberDTO();
+		dto.setUserId(userId);
+		dto.setUserPw(userPw);
+		dto.setUserNick(userNick);
+		dto.setUserPhoneNum(userPhoneNum);
+		dto.setUserEmail(userEmail);
+		MemberDAO dao = new MemberDAO();
+		if (dao.insert(dto))
+		{
+			response.getWriter().write("SUCCESS");
+		}
+		else
+		{
+			response.getWriter().write("FAIL");
+		}
 	}
 
 }

@@ -1,14 +1,13 @@
 package booth.member.model;
 
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.sql.DataSource;
 
 
 public class MemberDAO {
@@ -37,6 +36,26 @@ public class MemberDAO {
 		}catch(SQLException e) {
 			e.printStackTrace();
 		}
+	}
+	public boolean isIdDuplicated(String userId) {
+		String sql = "select * from BOOTH_MEMBER WHERE USER_ID = ?";
+		boolean result = false;
+		try {
+			con = ds.getConnection();
+			pstmt = con.prepareStatement(sql);
+			pstmt.setString(1, userId);
+			rs = pstmt.executeQuery();
+			
+			if (rs.next()) result = true;
+			
+			rs.close();
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			close();
+		}
+		return result;
 	}
 	public ArrayList<MemberDTO> list(){
 		String sql = "select * from BOOTH_MEMBER";
